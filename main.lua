@@ -11,7 +11,7 @@ love.graphics.setNewFont(64)
 love.graphics.printf("Updating...", 0, love.graphics.getHeight()/2, love.graphics.getWidth(), 'center')
 love.graphics.present()
 
-local base = "http://localhost/~spencer/cow-game/"
+local base = "http://24.4.128.81/~spencer/cow-game/"
 
 -- Pull down version info
 local manifest = {} 
@@ -47,9 +47,7 @@ if remoteVersion > localVersion then
 
 	-- Download the files
 	for i, file in ipairs(manifest.files) do
-		print(base..("version-%03d/"):format(remoteVersion)..file)
 		local contents = http.request(base..("version-%03d/"):format(remoteVersion)..file)
-		print(contents)
 		love.filesystem.write(("love-update/version-%03d/%s"):format(remoteVersion, file), contents)
 	end
 
