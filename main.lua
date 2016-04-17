@@ -22,39 +22,41 @@ do
 	f()
 end
 
--- Get latest remote version
-local remoteVersion = manifest.versions[#manifest.versions]
-
 -- Get installed version, zero otherwise
 localVersion = 0
 if love.filesystem.exists("love-update/version") then
 	localVersion = tonumber(love.filesystem.read("love-update/version"), 10)
 end
 
-if remoteVersion > localVersion then
-	-- Pull down latest version metadata
-	do
-		local s = http.request(base..("meta/manifest-%03d.lua"):format(remoteVersion))
-		local f = assert(loadstring(s))
-		setfenv(f, manifest)
-		f()
+if not #manifest == 0 then
+	-- Get latest remote version
+	local remoteVersion = manifest.versions[#manifest.versions]
+
+	if remoteVersion > localVersion then
+		-- Pull down latest version metadata
+		do
+			local s = http.request(base..("meta/manifest-%03d.lua"):format(remoteVersion))
+			local f = assert(loadstring(s))
+			setfenv(f, manifest)
+			f()
+		end
+
+		-- Make directories for storing it all
+		if not love.filesystem.exists("love-update") then love.filesystem.createDirectory("love-update") end
+
+		love.filesystem.createDirectory(("love-update/version-%03d"):format(remoteVersion))
+
+		-- Download the files
+		for i, file in ipairs(manifest.files) do
+			local contents = http.request(base..("version-%03d/"):format(remoteVersion)..file)
+			love.filesystem.write(("love-update/version-%03d/%s"):format(remoteVersion, file), contents)
+		end
+
+		-- Write the version number
+		love.filesystem.write("love-update/version", remoteVersion)
+		localVersion = remoteVersion
+
 	end
-
-	-- Make directories for storing it all
-	if not love.filesystem.exists("love-update") then love.filesystem.createDirectory("love-update") end
-
-	love.filesystem.createDirectory(("love-update/version-%03d"):format(remoteVersion))
-
-	-- Download the files
-	for i, file in ipairs(manifest.files) do
-		local contents = http.request(base..("version-%03d/"):format(remoteVersion)..file)
-		love.filesystem.write(("love-update/version-%03d/%s"):format(remoteVersion, file), contents)
-	end
-
-	-- Write the version number
-	love.filesystem.write("love-update/version", remoteVersion)
-	localVersion = remoteVersion
-
 end
 
 love.filesystem.load(("love-update/version-%03d/main.lua"):format(localVersion))()
