@@ -13,12 +13,12 @@ love.graphics.present()
 
 local base = "http://24.4.128.81/~spencer/cow-game/"
 
--- Pull down version info
-local manifest = {} 
-do
-	local s = http.request(base.."meta/manifest.lua")
+-- Function for getting table info from web
+function getData(url, table)
+	local s = http.request(url)
+	if s == nil then error() end -- Catch the http failure
 	local f = assert(loadstring(s))
-	setfenv(f, manifest)
+	setfenv(f, table)
 	f()
 end
 
@@ -28,18 +28,15 @@ if love.filesystem.exists("love-update/version") then
 	localVersion = tonumber(love.filesystem.read("love-update/version"), 10)
 end
 
-if not #manifest == 0 then
+-- Pull down remote version info
+local manifest = {}
+if pcall(getData, base.."meta/manifest.lua", manifest) then
 	-- Get latest remote version
 	local remoteVersion = manifest.versions[#manifest.versions]
 
 	if remoteVersion > localVersion then
 		-- Pull down latest version metadata
-		do
-			local s = http.request(base..("meta/manifest-%03d.lua"):format(remoteVersion))
-			local f = assert(loadstring(s))
-			setfenv(f, manifest)
-			f()
-		end
+		getData(base..("meta/manifest-%03d.lua"):format(remoteVersion), manifest)
 
 		-- Make directories for storing it all
 		if not love.filesystem.exists("love-update") then love.filesystem.createDirectory("love-update") end
@@ -57,6 +54,12 @@ if not #manifest == 0 then
 		localVersion = remoteVersion
 
 	end
+else
+	-- Crash if no game exists
+	if localVersion == 0 then
+		error("Failure - no game exists")
+	end
 end
 
+-- Run the game!
 love.filesystem.load(("love-update/version-%03d/main.lua"):format(localVersion))()
